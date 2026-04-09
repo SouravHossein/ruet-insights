@@ -1,6 +1,11 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
+import { MapPinned } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DISTRICTS } from "@/data/bangladesh-districts";
+import {
+  DISTRICT_COORDINATE_BOUNDS,
+  getDistrictCoordinate,
+} from "@/data/bangladesh-district-coordinates";
 import {
   Tooltip,
   TooltipContent,
@@ -13,16 +18,14 @@ interface DistrictMapProps {
   selectedDistrict?: string | null;
 }
 
-// Division-based grid layout for Bangladesh districts
-const DIVISION_LAYOUT: Record<string, { row: number; col: number }> = {
-  Rangpur: { row: 0, col: 1 },
-  Rajshahi: { row: 1, col: 0 },
-  Mymensingh: { row: 1, col: 2 },
-  Sylhet: { row: 1, col: 3 },
-  Dhaka: { row: 2, col: 1 },
-  Khulna: { row: 3, col: 0 },
-  Chattogram: { row: 2, col: 3 },
-  Barishal: { row: 3, col: 1 },
+const MAP_IMAGE_URL =
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/BD_Map_admin.svg/1024px-BD_Map_admin.svg.png";
+
+const MAP_PADDING = {
+  bottom: 7,
+  left: 14,
+  right: 10,
+  top: 8,
 };
 
 export function DistrictMap({
@@ -37,108 +40,153 @@ export function DistrictMap({
     return values.length > 0 ? Math.max(...values) : 1;
   }, [districtCounts]);
 
-  const getColor = (count: number) => {
-    if (count === 0) return "bg-cream-dark";
-    const intensity = count / maxCount;
-    if (intensity < 0.2) return "bg-emerald-mid/20";
-    if (intensity < 0.4) return "bg-emerald-mid/40";
-    if (intensity < 0.6) return "bg-emerald-mid/60";
-    if (intensity < 0.8) return "bg-emerald-mid/80";
-    return "bg-primary";
+  const plottedDistricts = useMemo(
+    () =>
+      DISTRICTS.map((district) => {
+        const coordinate = getDistrictCoordinate(district.name);
+        if (!coordinate) return null;
+
+        const xRatio =
+          (coordinate.lng - DISTRICT_COORDINATE_BOUNDS.minLng) /
+          (DISTRICT_COORDINATE_BOUNDS.maxLng - DISTRICT_COORDINATE_BOUNDS.minLng);
+        const yRatio =
+          (DISTRICT_COORDINATE_BOUNDS.maxLat - coordinate.lat) /
+          (DISTRICT_COORDINATE_BOUNDS.maxLat - DISTRICT_COORDINATE_BOUNDS.minLat);
+
+        return {
+          ...district,
+          count: districtCounts[district.name] || 0,
+          x:
+            MAP_PADDING.left +
+            xRatio * (100 - MAP_PADDING.left - MAP_PADDING.right),
+          y:
+            MAP_PADDING.top +
+            yRatio * (100 - MAP_PADDING.top - MAP_PADDING.bottom),
+        };
+      }).filter(Boolean),
+    [districtCounts],
+  );
+
+  const topDistricts = useMemo(
+    () =>
+      [...plottedDistricts]
+        .sort((left, right) => right.count - left.count)
+        .slice(0, 6),
+    [plottedDistricts],
+  );
+
+  const getMarkerSize = (count: number) => {
+    if (count === 0) return 10;
+    return 12 + Math.round((count / maxCount) * 18);
   };
 
-  const getTextColor = (count: number) => {
-    if (count === 0) return "text-muted-foreground";
+  const getMarkerClass = (count: number, isSelected: boolean) => {
+    if (isSelected) {
+      return "border-accent bg-accent text-accent-foreground shadow-lg shadow-accent/20";
+    }
+    if (count === 0) {
+      return "border-border/80 bg-background/90 text-muted-foreground";
+    }
     const intensity = count / maxCount;
-    if (intensity >= 0.6) return "text-primary-foreground";
-    return "text-foreground";
+    if (intensity < 0.2) return "border-primary/30 bg-primary/20 text-primary";
+    if (intensity < 0.45) return "border-primary/40 bg-primary/40 text-primary-foreground";
+    if (intensity < 0.7) return "border-primary/60 bg-primary/70 text-primary-foreground";
+    return "border-primary bg-primary text-primary-foreground";
   };
-
-  // Group districts by division
-  const districtsByDivision = useMemo(() => {
-    const grouped: Record<string, typeof DISTRICTS> = {};
-    DISTRICTS.forEach((d) => {
-      if (!grouped[d.division]) grouped[d.division] = [];
-      grouped[d.division].push(d);
-    });
-    return grouped;
-  }, []);
 
   return (
     <Card className="border-border/50">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-bold">
-          Bangladesh District Heatmap
+        <CardTitle className="flex items-center gap-2 text-lg font-bold">
+          <MapPinned className="h-5 w-5 text-accent" />
+          Bangladesh District Map
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Student distribution by district (grouped by division)
+          Real district placement using public Bangladesh district coordinates
         </p>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-4 gap-3">
-          {Object.entries(DIVISION_LAYOUT).map(([division, pos]) => (
-            <div
-              key={division}
-              className="space-y-1.5"
-              style={{
-                gridRow: pos.row + 1,
-                gridColumn: pos.col + 1,
-              }}
-            >
-              <h4 className="text-xs font-semibold text-accent uppercase tracking-wider">
-                {division}
-              </h4>
-              <div className="flex flex-wrap gap-1">
-                {(districtsByDivision[division] || []).map((district) => {
-                  const count = districtCounts[district.name] || 0;
-                  const isSelected = selectedDistrict === district.name;
-                  const isHovered = hoveredDistrict === district.name;
+      <CardContent className="space-y-4">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_220px]">
+          <div className="relative overflow-hidden rounded-[1.75rem] border border-border/60 bg-[radial-gradient(circle_at_top,_hsl(var(--cream))_0%,_hsl(var(--cream-dark))_100%)] aspect-[4/5]">
+            <img
+              src={MAP_IMAGE_URL}
+              alt="Bangladesh administrative map"
+              className="absolute inset-0 h-full w-full object-contain opacity-85"
+            />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_transparent_35%,_hsl(var(--background)/0.35)_100%)]" />
 
-                  return (
-                    <Tooltip key={district.code}>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={() => onDistrictClick?.(district.name)}
-                          onMouseEnter={() =>
-                            setHoveredDistrict(district.name)
-                          }
-                          onMouseLeave={() => setHoveredDistrict(null)}
-                          className={`
-                            rounded-md px-1.5 py-1 text-[10px] font-medium transition-all cursor-pointer
-                            ${getColor(count)} ${getTextColor(count)}
-                            ${isSelected ? "ring-2 ring-accent ring-offset-1" : ""}
-                            ${isHovered ? "scale-110 shadow-md" : ""}
-                          `}
-                        >
-                          {district.code}
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="font-semibold">{district.name}</p>
-                        <p className="text-xs">
-                          {count} student{count !== 1 ? "s" : ""}
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                })}
-              </div>
+            {plottedDistricts.map((district) => {
+              const isHovered = hoveredDistrict === district.name;
+              const isSelected = selectedDistrict === district.name;
+              const markerSize = getMarkerSize(district.count);
+
+              return (
+                <Tooltip key={district.code}>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => onDistrictClick?.(district.name)}
+                      onMouseEnter={() => setHoveredDistrict(district.name)}
+                      onMouseLeave={() => setHoveredDistrict(null)}
+                      className={`absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border text-[10px] font-bold transition-all ${getMarkerClass(district.count, isSelected)} ${isHovered ? "scale-110" : ""}`}
+                      style={{
+                        height: `${markerSize}px`,
+                        left: `${district.x}%`,
+                        top: `${district.y}%`,
+                        width: `${markerSize}px`,
+                      }}
+                    >
+                      {district.count > 0 ? district.code.slice(0, 1) : ""}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="font-semibold">{district.name}</p>
+                    <p className="text-xs">
+                      {district.count} student{district.count !== 1 ? "s" : ""}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
+          </div>
+
+          <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+            <div className="mb-3 text-sm font-semibold text-foreground">Most represented</div>
+            <div className="space-y-2">
+              {topDistricts.map((district) => (
+                <button
+                  key={district.code}
+                  type="button"
+                  onClick={() => onDistrictClick?.(district.name)}
+                  className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-colors ${
+                    selectedDistrict === district.name
+                      ? "bg-accent text-accent-foreground"
+                      : "bg-background/80 hover:bg-background"
+                  }`}
+                >
+                  <span>{district.name}</span>
+                  <span className="text-xs font-semibold">{district.count}</span>
+                </button>
+              ))}
             </div>
-          ))}
+
+            <div className="mt-5 text-xs text-muted-foreground">
+              Marker size and color both scale with the number of verified students from each
+              district.
+            </div>
+          </div>
         </div>
 
-        {/* Legend */}
-        <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-          <span>Less</span>
-          <div className="flex gap-0.5">
-            <div className="h-3 w-6 rounded-sm bg-cream-dark" />
-            <div className="h-3 w-6 rounded-sm bg-emerald-mid/20" />
-            <div className="h-3 w-6 rounded-sm bg-emerald-mid/40" />
-            <div className="h-3 w-6 rounded-sm bg-emerald-mid/60" />
-            <div className="h-3 w-6 rounded-sm bg-emerald-mid/80" />
-            <div className="h-3 w-6 rounded-sm bg-primary" />
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span>Lower</span>
+          <div className="flex gap-1">
+            <div className="h-3 w-5 rounded-full border border-border bg-background" />
+            <div className="h-3 w-5 rounded-full border border-primary/30 bg-primary/20" />
+            <div className="h-3 w-5 rounded-full border border-primary/40 bg-primary/40" />
+            <div className="h-3 w-5 rounded-full border border-primary/60 bg-primary/70" />
+            <div className="h-3 w-5 rounded-full border border-primary bg-primary" />
           </div>
-          <span>More</span>
+          <span>Higher</span>
         </div>
       </CardContent>
     </Card>

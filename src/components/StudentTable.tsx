@@ -16,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DEPARTMENTS } from "@/data/bangladesh-districts";
 import { Search } from "lucide-react";
 
 interface Student {
@@ -39,6 +38,10 @@ interface StudentTableProps {
 export function StudentTable({ students, loading }: StudentTableProps) {
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState<string>("all");
+  const departments = useMemo(
+    () => Array.from(new Set(students.map((student) => student.department))).sort(),
+    [students],
+  );
 
   const filtered = useMemo(() => {
     return students.filter((s) => {
@@ -67,13 +70,13 @@ export function StudentTable({ students, loading }: StudentTableProps) {
         </div>
         <Select value={deptFilter} onValueChange={setDeptFilter}>
           <SelectTrigger className="w-full sm:w-[240px]">
-            <SelectValue placeholder="Filter by department" />
+          <SelectValue placeholder="Filter by department" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Departments</SelectItem>
-            {DEPARTMENTS.map((d) => (
-              <SelectItem key={d} value={d}>
-                {d}
+            {departments.map((department) => (
+              <SelectItem key={department} value={department}>
+                {department}
               </SelectItem>
             ))}
           </SelectContent>

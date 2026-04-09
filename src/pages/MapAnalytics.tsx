@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { DistrictMap } from "@/components/DistrictMap";
 import { InsightsPanel } from "@/components/InsightsPanel";
-import { DISTRICTS, DEPARTMENTS } from "@/data/bangladesh-districts";
+import { DISTRICTS } from "@/data/bangladesh-districts";
 import { Slider } from "@/components/ui/slider";
 import {
   Select,
@@ -71,6 +71,11 @@ export default function MapAnalytics() {
     return counts;
   }, [filtered]);
 
+  const departments = useMemo(
+    () => Array.from(new Set(students.map((student) => student.department))).sort(),
+    [students],
+  );
+
   const maxRank = students.length > 0 ? Math.max(...students.map((s) => s.merit_rank)) : 2000;
 
   return (
@@ -88,18 +93,18 @@ export default function MapAnalytics() {
           <Label className="text-xs">Department</Label>
           <Select value={deptFilter} onValueChange={setDeptFilter}>
             <SelectTrigger className="w-[200px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Departments</SelectItem>
-              {DEPARTMENTS.map((d) => (
-                <SelectItem key={d} value={d}>
-                  {d}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Departments</SelectItem>
+            {departments.map((department) => (
+              <SelectItem key={department} value={department}>
+                {department}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
         <div className="space-y-1.5 w-[200px]">
           <Label className="text-xs">
