@@ -1,8 +1,6 @@
 import {
   LayoutDashboard,
   Map,
-  UserCheck,
-  Shield,
   Info,
   GraduationCap,
 } from "lucide-react";
@@ -23,13 +21,8 @@ import {
 } from "@/components/ui/sidebar";
 
 const mainItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Map & Analytics", url: "/analytics", icon: Map },
-  { title: "Verification", url: "/verify", icon: UserCheck },
-];
-
-const adminItems = [
-  { title: "Admin Panel", url: "/admin", icon: Shield },
+  { title: "Heatmap", url: "/", icon: Map },
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
 ];
 
 const infoItems = [
@@ -69,38 +62,10 @@ export function AppSidebar() {
             <SidebarMenu>
               {mainItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.url)}
-                  >
+                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
                     <NavLink
                       to={item.url}
                       end={item.url === "/"}
-                      className="hover:bg-sidebar-accent/50"
-                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                    >
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Management</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {adminItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.url)}
-                  >
-                    <NavLink
-                      to={item.url}
                       className="hover:bg-sidebar-accent/50"
                       activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                     >
@@ -119,10 +84,7 @@ export function AppSidebar() {
             <SidebarMenu>
               {infoItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.url)}
-                  >
+                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
                     <NavLink
                       to={item.url}
                       className="hover:bg-sidebar-accent/50"

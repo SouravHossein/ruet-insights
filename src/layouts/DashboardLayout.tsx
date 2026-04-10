@@ -1,5 +1,6 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { VerificationModal } from "@/components/VerificationModal";
 import { Outlet } from "react-router-dom";
 
 export default function DashboardLayout() {
@@ -13,6 +14,9 @@ export default function DashboardLayout() {
             <h1 className="text-lg font-semibold text-foreground">
               RUET Student Intelligence Dashboard
             </h1>
+            <div className="ml-auto">
+              <VerificationModal />
+            </div>
           </header>
           <main className="flex-1 overflow-auto p-6">
             <Outlet />

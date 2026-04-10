@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { PdfUploader } from "@/components/PdfUploader";
 import { StudentTable } from "@/components/StudentTable";
+import { AdminGate } from "@/components/AdminGate";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -35,26 +36,28 @@ export default function AdminPanel() {
   }, []);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-foreground">Admin Panel</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Manage student data, upload admission lists, and view records
-        </p>
-      </div>
+    <AdminGate>
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Admin Panel</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage student data, upload admission lists, and view records
+          </p>
+        </div>
 
-      <Tabs defaultValue="students">
-        <TabsList>
-          <TabsTrigger value="students">Students ({students.length})</TabsTrigger>
-          <TabsTrigger value="upload">Upload Data</TabsTrigger>
-        </TabsList>
-        <TabsContent value="students" className="mt-4">
-          <StudentTable students={students} loading={loading} />
-        </TabsContent>
-        <TabsContent value="upload" className="mt-4">
-          <PdfUploader onUploadComplete={fetchStudents} />
-        </TabsContent>
-      </Tabs>
-    </div>
+        <Tabs defaultValue="students">
+          <TabsList>
+            <TabsTrigger value="students">Students ({students.length})</TabsTrigger>
+            <TabsTrigger value="upload">Upload Data</TabsTrigger>
+          </TabsList>
+          <TabsContent value="students" className="mt-4">
+            <StudentTable students={students} loading={loading} />
+          </TabsContent>
+          <TabsContent value="upload" className="mt-4">
+            <PdfUploader onUploadComplete={fetchStudents} />
+          </TabsContent>
+        </Tabs>
+      </div>
+    </AdminGate>
   );
 }
