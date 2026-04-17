@@ -62,10 +62,10 @@ export function PdfUploader({ onUploadComplete }: PdfUploaderProps) {
       } else {
         throw new Error("Invalid response format");
       }
-    } catch (err: any) {
+    } catch (err) {
       toast({
         title: "Parse failed",
-        description: err.message || "Could not parse the file.",
+        description: err instanceof Error ? err.message : "Could not parse the file.",
         variant: "destructive",
       });
     } finally {
@@ -105,10 +105,10 @@ export function PdfUploader({ onUploadComplete }: PdfUploaderProps) {
         description: `${parsedData.length} students added to database.`,
       });
       onUploadComplete?.();
-    } catch (err: any) {
+    } catch (err) {
       toast({
         title: "Import failed",
-        description: err.message,
+        description: err instanceof Error ? err.message : "Could not import the parsed students.",
         variant: "destructive",
       });
     } finally {

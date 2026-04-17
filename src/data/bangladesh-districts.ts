@@ -50,7 +50,6 @@ export const DISTRICTS: District[] = [
   { name: "Narayanganj", division: "Dhaka", code: "NRG" },
   { name: "Narsingdi", division: "Dhaka", code: "NRS" },
   { name: "Natore", division: "Rajshahi", code: "NAT" },
-  { name: "Nawabganj", division: "Rajshahi", code: "NAW" },
   { name: "Netrokona", division: "Mymensingh", code: "NET" },
   { name: "Nilphamari", division: "Rangpur", code: "NIL" },
   { name: "Noakhali", division: "Chattogram", code: "NOA" },

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { DistrictMap } from "@/components/DistrictMap";
 import { InsightsPanel } from "@/components/InsightsPanel";
 import { DISTRICTS } from "@/data/bangladesh-districts";
@@ -13,6 +14,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
+import { canonicalizeDistrictName } from "@/lib/district-geo";
 
 interface Student {
   id: string;
@@ -23,10 +25,11 @@ interface Student {
 }
 
 export default function MapAnalytics() {
+  const { t } = useTranslation();
   const [students, setStudents] = useState<Student[]>([]);
   const [deptFilter, setDeptFilter] = useState("all");
   const [meritRange, setMeritRange] = useState([0, 2000]);
-  const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [verifiedOnly, setVerifiedOnly] = useState(true);
   const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null);
 
   useEffect(() => {
@@ -49,7 +52,12 @@ export default function MapAnalytics() {
       if (s.merit_rank < meritRange[0] || s.merit_rank > meritRange[1])
         return false;
       if (verifiedOnly && s.verification_status !== "verified") return false;
-      if (selectedDistrict && s.district !== selectedDistrict) return false;
+      if (
+        selectedDistrict &&
+        canonicalizeDistrictName(s.district ?? "") !== selectedDistrict
+      ) {
+        return false;
+      }
       return true;
     });
   }, [students, deptFilter, meritRange, verifiedOnly, selectedDistrict]);
@@ -58,7 +66,10 @@ export default function MapAnalytics() {
     const counts: Record<string, number> = {};
     DISTRICTS.forEach((d) => (counts[d.name] = 0));
     filtered.forEach((s) => {
-      if (s.district) counts[s.district] = (counts[s.district] || 0) + 1;
+      if (s.verification_status === "verified" && s.district) {
+        const districtName = canonicalizeDistrictName(s.district);
+        counts[districtName] = (counts[districtName] || 0) + 1;
+      }
     });
     return counts;
   }, [filtered]);
@@ -81,9 +92,9 @@ export default function MapAnalytics() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-foreground">Map & Analytics</h2>
+        <h2 className="text-2xl font-bold text-foreground">{t('map.title')}</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Geographic distribution of RUET students across Bangladesh
+          {t('map.description')} District colors represent verified student counts by district.
         </p>
       </div>
 
@@ -146,6 +157,7 @@ export default function MapAnalytics() {
         <div className="lg:col-span-2">
           <DistrictMap
             districtCounts={districtCounts}
+            mode="analytics"
             onDistrictClick={(d) =>
               setSelectedDistrict(selectedDistrict === d ? null : d)
             }

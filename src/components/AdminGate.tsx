@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Lock } from "lucide-react";
 
-const ADMIN_PASSWORD = "ruet-admin-2025";
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || "admin123"; // Replace with your secure password or use environment variable
 const SESSION_KEY = "ruet-admin-auth";
 
 interface AdminGateProps {

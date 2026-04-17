@@ -107,3 +107,58 @@
     font-family: 'Inter', sans-serif;
   }
 }
+
+@layer components {
+  .district-shape {
+    transition:
+      fill 180ms ease,
+      fill-opacity 180ms ease,
+      stroke 180ms ease,
+      stroke-width 180ms ease,
+      filter 220ms ease;
+  }
+
+  .district-shape--interactive {
+    cursor: pointer;
+  }
+
+  .district-shape--selected {
+    filter: drop-shadow(0 0 8px rgba(255, 191, 110, 0.45));
+  }
+
+  .district-shape--success {
+    animation: district-burn 1.4s ease-out;
+    filter: drop-shadow(0 0 14px rgba(240, 74, 23, 0.65));
+  }
+
+  .district-tooltip {
+    min-width: 10rem;
+  }
+
+  .district-tooltip__title {
+    font-weight: 700;
+    margin-bottom: 0.125rem;
+  }
+}
+
+@keyframes district-burn {
+  0% {
+    fill-opacity: 0.72;
+    filter: drop-shadow(0 0 0 rgba(255, 196, 86, 0));
+  }
+
+  35% {
+    fill-opacity: 0.98;
+    filter: drop-shadow(0 0 14px rgba(255, 148, 47, 0.7));
+  }
+
+  70% {
+    fill-opacity: 0.92;
+    filter: drop-shadow(0 0 18px rgba(240, 74, 23, 0.78));
+  }
+
+  100% {
+    fill-opacity: 0.84;
+    filter: drop-shadow(0 0 8px rgba(240, 74, 23, 0.25));
+  }
+}

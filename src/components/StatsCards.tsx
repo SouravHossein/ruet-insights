@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, CheckCircle, MapPin, Award } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface StatsCardsProps {
   totalStudents: number;
@@ -14,19 +15,20 @@ export function StatsCards({
   topDistrict,
   topDepartment,
 }: StatsCardsProps) {
+  const { t } = useTranslation();
   const verifiedPercent =
     totalStudents > 0 ? Math.round((verifiedCount / totalStudents) * 100) : 0;
 
   const stats = [
     {
-      label: "Total Students",
+      label: t('dashboard.totalStudents'),
       value: totalStudents.toLocaleString(),
       icon: Users,
       accent: "text-primary",
       bg: "bg-primary/10",
     },
     {
-      label: "Verified",
+      label: t('dashboard.verifiedStudents'),
       value: `${verifiedPercent}%`,
       subtitle: `${verifiedCount} students`,
       icon: CheckCircle,
@@ -34,7 +36,7 @@ export function StatsCards({
       bg: "bg-secondary/10",
     },
     {
-      label: "Top District",
+      label: t('dashboard.districts'),
       value: topDistrict || "—",
       icon: MapPin,
       accent: "text-accent",

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { StatsCards } from "@/components/StatsCards";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -11,6 +12,7 @@ interface Student {
 }
 
 export default function DashboardHome() {
+  const { t } = useTranslation();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -50,9 +52,9 @@ export default function DashboardHome() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-foreground">Dashboard</h2>
+        <h2 className="text-2xl font-bold text-foreground">{t('dashboard.title')}</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Overview of RUET admission data and verification status
+          {t('dashboard.welcome')}
         </p>
       </div>
 
@@ -67,20 +69,20 @@ export default function DashboardHome() {
         <div className="rounded-lg border border-border/50 bg-card p-6">
           <h3 className="font-semibold text-foreground mb-3">Quick Actions</h3>
           <div className="space-y-2 text-sm text-muted-foreground">
-            <p>• Navigate to <strong>Map & Analytics</strong> to explore geographic distribution</p>
-            <p>• Use <strong>Student Verification</strong> to verify your district</p>
-            <p>• Access <strong>Admin Panel</strong> to upload admission data</p>
+            <p>• Navigate to <strong>{t('nav.mapAnalytics')}</strong> to explore geographic distribution</p>
+            <p>• Use <strong>{t('nav.verification')}</strong> to verify your district</p>
+            <p>• Access <strong>{t('nav.adminPanel')}</strong> to upload admission data</p>
           </div>
         </div>
         <div className="rounded-lg border border-border/50 bg-card p-6">
-          <h3 className="font-semibold text-foreground mb-3">Data Summary</h3>
+          <h3 className="font-semibold text-foreground mb-3">{t('dashboard.stats')}</h3>
           <div className="space-y-2 text-sm text-muted-foreground">
             {loading ? (
-              <p>Loading...</p>
+              <p>{t('common.loading')}</p>
             ) : (
               <>
-                <p>Total students: <strong>{students.length}</strong></p>
-                <p>Verified: <strong>{stats.verifiedCount}</strong></p>
+                <p>{t('dashboard.totalStudents')}: <strong>{students.length}</strong></p>
+                <p>{t('dashboard.verifiedStudents')}: <strong>{stats.verifiedCount}</strong></p>
                 <p>Unverified: <strong>{students.length - stats.verifiedCount}</strong></p>
               </>
             )}

@@ -51,6 +51,15 @@ Deno.serve(async (req) => {
   }
 });
 
+interface ParsedStudent {
+  sl: string;
+  application_id: string;
+  admission_roll: string;
+  name: string;
+  merit_rank: number;
+  department: string;
+}
+
 function extractTextFromPdf(bytes: Uint8Array): string {
   // Simple PDF text extraction - looks for text between BT/ET markers
   const decoder = new TextDecoder("latin1");
@@ -85,8 +94,8 @@ function extractTextFromPdf(bytes: Uint8Array): string {
   return textChunks.join("\n");
 }
 
-function parseAdmissionText(text: string): any[] {
-  const students: any[] = [];
+function parseAdmissionText(text: string): ParsedStudent[] {
+  const students: ParsedStudent[] = [];
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
 
   // Try to detect CSV format
@@ -115,8 +124,8 @@ function parseAdmissionText(text: string): any[] {
   return students;
 }
 
-function parseCsv(lines: string[]): any[] {
-  const students: any[] = [];
+function parseCsv(lines: string[]): ParsedStudent[] {
+  const students: ParsedStudent[] = [];
   // Skip header
   const header = lines[0].toLowerCase();
   const startIdx = header.includes("sl") || header.includes("name") ? 1 : 0;

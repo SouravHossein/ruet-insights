@@ -9,12 +9,10 @@ const corsHeaders = {
 const MAX_VERIFICATIONS_PER_IP = 3;
 
 interface VerificationPayload {
-  admissionRoll: string;
-  applicationId?: string | null;
+  studentId: string;
   department: string;
   district: string;
   meritRank: number;
-  name: string;
 }
 
 const jsonResponse = (body: unknown, status = 200) =>
@@ -66,6 +64,7 @@ Deno.serve(async (request) => {
       return jsonResponse({ error: "Please sign in before verifying." }, 401);
     }
 
+    const jwt = authorization.replace(/^Bearer\s+/i, "").trim();
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -85,14 +84,22 @@ Deno.serve(async (request) => {
       return jsonResponse({ error: "Your session is no longer valid. Please sign in again." }, 401);
     }
 
+    const { data: assurance, error: assuranceError } =
+      await authClient.auth.mfa.getAuthenticatorAssuranceLevel(jwt);
+
+    if (assuranceError) {
+      throw assuranceError;
+    }
+
+    if (assurance?.currentLevel !== "aal2") {
+      return jsonResponse(
+        { error: "Phone MFA is required before you can lock a district." },
+        403,
+      );
+    }
+
     const payload = (await request.json()) as VerificationPayload;
-    if (
-      !payload?.admissionRoll ||
-      !payload?.name ||
-      !payload?.department ||
-      !payload?.district ||
-      !payload?.meritRank
-    ) {
+    if (!payload?.studentId || !payload?.department || !payload?.district || !payload?.meritRank) {
       return jsonResponse({ error: "Incomplete verification request." }, 400);
     }
 
@@ -114,7 +121,7 @@ Deno.serve(async (request) => {
       return jsonResponse(
         {
           error:
-            "This Google or phone account already verified one RUET student. Please sign in with the original account if you need to view the same submission again.",
+            "This Google account already verified one RUET student. Please use the same account to revisit that submission.",
         },
         409,
       );
@@ -144,67 +151,68 @@ Deno.serve(async (request) => {
       );
     }
 
-    const { data: existingStudent, error: existingStudentError } = await serviceClient
+    const { data: student, error: studentError } = await serviceClient
       .from("students")
-      .select("id, district, is_locked, merit_rank, name, department")
-      .eq("admission_roll", payload.admissionRoll)
+      .select("id, department, district, is_locked, merit_rank, name")
+      .eq("id", payload.studentId)
       .maybeSingle();
 
-    if (existingStudentError) {
-      throw existingStudentError;
+    if (studentError) {
+      throw studentError;
     }
 
-    if (existingStudent?.is_locked) {
+    if (!student) {
+      return jsonResponse({ error: "The selected student record was not found." }, 404);
+    }
+
+    if (student.is_locked) {
       return jsonResponse(
         {
-          error: `This admission record is already locked with ${existingStudent.district ?? "a saved district"}.`,
+          error: `This admission record is already locked with ${student.district ?? "a saved district"}.`,
         },
         409,
       );
     }
 
-    let studentId = existingStudent?.id ?? null;
+    if (student.department !== payload.department || student.merit_rank !== payload.meritRank) {
+      return jsonResponse(
+        {
+          error: "Department or merit rank does not match the selected student record.",
+        },
+        409,
+      );
+    }
 
-    if (studentId) {
-      const { error: updateError } = await serviceClient
-        .from("students")
-        .update({
-          application_id: payload.applicationId ?? null,
-          department: payload.department,
-          district: payload.district,
-          is_locked: true,
-          merit_rank: payload.meritRank,
-          name: payload.name,
-          verification_status: "verified",
-          verified_at: now,
-        })
-        .eq("id", studentId);
-
-      if (updateError) {
-        throw updateError;
-      }
-    } else {
-      const { data: insertedStudent, error: insertError } = await serviceClient
-        .from("students")
-        .insert({
-          admission_roll: payload.admissionRoll,
-          application_id: payload.applicationId ?? null,
-          department: payload.department,
-          district: payload.district,
-          is_locked: true,
-          merit_rank: payload.meritRank,
-          name: payload.name,
-          verification_status: "verified",
-          verified_at: now,
-        })
+    const { data: existingStudentVerification, error: existingStudentVerificationError } =
+      await serviceClient
+        .from("student_verifications")
         .select("id")
-        .single();
+        .eq("student_id", payload.studentId)
+        .maybeSingle();
 
-      if (insertError) {
-        throw insertError;
-      }
+    if (existingStudentVerificationError) {
+      throw existingStudentVerificationError;
+    }
 
-      studentId = insertedStudent.id;
+    if (existingStudentVerification) {
+      return jsonResponse(
+        { error: "This student record already has a verification entry." },
+        409,
+      );
+    }
+
+    const { error: updateError } = await serviceClient
+      .from("students")
+      .update({
+        district: payload.district,
+        is_locked: true,
+        verification_status: "verified",
+        verified_at: now,
+      })
+      .eq("id", payload.studentId);
+
+    if (updateError) {
+      throw updateError;
     }
 
     const contactHint = maskContact(user.phone || user.email || null);
@@ -214,7 +222,7 @@ Deno.serve(async (request) => {
         auth_provider: String(user.app_metadata?.provider ?? "authenticated"),
         contact_hint: contactHint,
         ip_hash: ipHash,
-        student_id: studentId,
+        student_id: payload.studentId,
         user_id: user.id,
       });
 
@@ -224,10 +232,10 @@ Deno.serve(async (request) => {
 
     return jsonResponse({
       student: {
-        department: payload.department,
+        department: student.department,
         district: payload.district,
-        merit_rank: payload.meritRank,
-        name: payload.name,
+        merit_rank: student.merit_rank,
+        name: student.name,
       },
     });
   } catch (error) {

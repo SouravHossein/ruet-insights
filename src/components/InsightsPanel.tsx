@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, BarChart3 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface InsightsPanelProps {
   districtCounts: Record<string, number>;
@@ -11,6 +12,7 @@ export function InsightsPanel({
   districtCounts,
   departmentCounts,
 }: InsightsPanelProps) {
+  const { t } = useTranslation();
   const sortedDistricts = Object.entries(districtCounts)
     .sort(([, a], [, b]) => b - a)
     .filter(([, count]) => count > 0);
@@ -34,12 +36,12 @@ export function InsightsPanel({
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-accent" />
-            Top Districts
+            {t('insights.topDistricts')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           {topDistricts.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No data yet</p>
+            <p className="text-xs text-muted-foreground">{t('insights.noData')}</p>
           ) : (
             topDistricts.map(([name, count], i) => {
               const percent = totalStudents > 0 ? (count / totalStudents) * 100 : 0;
@@ -72,12 +74,12 @@ export function InsightsPanel({
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <BarChart3 className="h-4 w-4 text-primary" />
-            By Department
+            {t('insights.byDepartment')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           {sortedDepts.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No data yet</p>
+            <p className="text-xs text-muted-foreground">{t('insights.noData')}</p>
           ) : (
             sortedDepts.map(([name, count]) => {
               const percent = totalStudents > 0 ? (count / totalStudents) * 100 : 0;
@@ -126,12 +128,12 @@ export function InsightsPanel({
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <TrendingDown className="h-4 w-4 text-destructive" />
-            Underrepresented
+            {t('insights.underrepresented')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {underrepresented.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No data yet</p>
+            <p className="text-xs text-muted-foreground">{t('insights.noData')}</p>
           ) : (
             <div className="flex flex-wrap gap-1.5">
               {underrepresented.map(([name, count]) => (
