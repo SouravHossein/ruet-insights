@@ -1,29 +1,15 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import {
-  AlertCircle,
-  CheckCircle2,
-  Chrome,
-  Loader2,
-  Lock,
-  MapPin,
-  ShieldCheck,
-  Smartphone,
-} from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
+import { CheckCircle2, Chrome, Flame, Loader2, MapPin, Search, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -41,6 +27,7 @@ import {
   loadRuetStudents,
   normalizeStudentName,
 } from "@/lib/ruet-students";
+import { cn } from "@/lib/utils";
 
 const MAX_SUGGESTIONS = 8;
 
@@ -53,21 +40,26 @@ const normalizePhoneNumber = (value: string) => {
   return trimmed;
 };
 
+type Step = "auth" | "search" | "confirm" | "district" | "done";
+
 export function VerificationModal() {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [authChecking, setAuthChecking] = useState(true);
+
   const [directory, setDirectory] = useState<SearchableRuetStudent[]>([]);
   const [directoryLoading, setDirectoryLoading] = useState(true);
+
+  const [step, setStep] = useState<Step>("auth");
   const [nameQuery, setNameQuery] = useState("");
   const deferredNameQuery = useDeferredValue(nameQuery);
   const [selectedStudent, setSelectedStudent] = useState<SearchableRuetStudent | null>(null);
   const [department, setDepartment] = useState("");
   const [meritRank, setMeritRank] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [igniting, setIgniting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [verified, setVerified] = useState(false);
   const [verifiedDistrict, setVerifiedDistrict] = useState<string | null>(null);
 
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -77,25 +69,24 @@ export function VerificationModal() {
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  // Check session on mount
+  // Session
   useEffect(() => {
     let mounted = true;
-    const hydrate = async () => {
-      const { data: { session: s } } = await supabase.auth.getSession();
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
       if (!mounted) return;
       setSession(s);
       setAuthChecking(false);
-    };
-    hydrate();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      if (s) setStep((cur) => (cur === "auth" ? "search" : cur));
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s);
       setAuthChecking(false);
+      if (s) setStep((cur) => (cur === "auth" ? "search" : cur));
     });
     return () => { mounted = false; subscription.unsubscribe(); };
   }, []);
 
-  // Load student directory
+  // Directory
   useEffect(() => {
     let cancelled = false;
     loadRuetStudents()
@@ -104,13 +95,6 @@ export function VerificationModal() {
       .finally(() => { if (!cancelled) setDirectoryLoading(false); });
     return () => { cancelled = true; };
   }, []);
-
-  // Check if user already verified (has a locked student record via IP)
-  useEffect(() => {
-    if (!session) return;
-    // We just check if any student with this user's session is already locked
-    // The actual check happens when they try to submit
-  }, [session]);
 
   const availableDepartments = useMemo(
     () => Array.from(new Set(directory.map((s) => s.department))).sort(),
@@ -131,9 +115,6 @@ export function VerificationModal() {
       .slice(0, MAX_SUGGESTIONS);
   }, [directory, searchTerm]);
 
-  const meritMismatch = selectedStudent && meritRank ? Number(meritRank) !== selectedStudent.merit : false;
-  const departmentMismatch = selectedStudent && department ? department !== selectedStudent.department : false;
-
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
@@ -144,7 +125,7 @@ export function VerificationModal() {
       if (result.redirected) return;
     } catch (error) {
       toast({
-        title: "Google sign-in failed",
+        title: "Sign-in failed",
         description: error instanceof Error ? error.message : "Please try again.",
         variant: "destructive",
       });
@@ -155,7 +136,7 @@ export function VerificationModal() {
   const handleSendOtp = async () => {
     const normalized = normalizePhoneNumber(phoneNumber);
     if (!normalized) {
-      toast({ title: "Phone required", description: "Enter your phone number.", variant: "destructive" });
+      toast({ title: "Enter a phone number", variant: "destructive" });
       return;
     }
     setSendingOtp(true);
@@ -164,27 +145,34 @@ export function VerificationModal() {
       if (error) throw error;
       setPhoneNumber(normalized);
       setOtpSent(true);
-      toast({ title: "Code sent", description: "Enter the 6-digit code sent to your phone." });
     } catch (error) {
-      toast({ title: "OTP send failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+      toast({
+        title: "Could not send code",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSendingOtp(false);
     }
   };
 
   const handleVerifyOtp = async () => {
-    if (otp.length !== 6) {
-      toast({ title: "Incomplete code", description: "Enter the full 6-digit code.", variant: "destructive" });
-      return;
-    }
+    if (otp.length !== 6) return;
     setVerifyingOtp(true);
     try {
-      const { error } = await supabase.auth.verifyOtp({ phone: phoneNumber, token: otp, type: "sms" });
+      const { error } = await supabase.auth.verifyOtp({
+        phone: phoneNumber,
+        token: otp,
+        type: "sms",
+      });
       if (error) throw error;
       setOtp("");
-      toast({ title: "Signed in", description: "Phone verified." });
     } catch (error) {
-      toast({ title: "Verification failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+      toast({
+        title: "Invalid code",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setVerifyingOtp(false);
     }
@@ -193,48 +181,53 @@ export function VerificationModal() {
   const handleSelectStudent = (student: SearchableRuetStudent) => {
     setSelectedStudent(student);
     setNameQuery(student.name);
-    setDepartment("");
-    setMeritRank("");
+    setStep("confirm");
   };
 
-  const handleSubmit = async () => {
-    if (!session?.user) {
-      toast({ title: "Login required", description: "Sign in first.", variant: "destructive" });
+  const handleConfirmIdentity = () => {
+    if (!department || !meritRank) {
+      toast({ title: "Fill in both fields", variant: "destructive" });
       return;
     }
-    if (!selectedStudent || !department || !meritRank || !selectedDistrict) {
-      toast({ title: "Missing details", description: "Complete all fields.", variant: "destructive" });
-      return;
-    }
-    if (department !== selectedStudent.department || Number(meritRank) !== selectedStudent.merit) {
-      toast({ title: "Information mismatch", description: "Department or merit rank does not match.", variant: "destructive" });
-      return;
-    }
+    setStep("district");
+  };
 
+  const handleDistrictPick = (district: string) => {
+    setSelectedDistrict(district);
+    setIgniting(true);
+    // Auto-submit after the burning animation gets going
+    setTimeout(() => handleSubmit(district), 900);
+  };
+
+  const handleSubmit = async (district: string) => {
+    if (!session?.user || !selectedStudent) return;
     setSubmitting(true);
     try {
       const { data, error } = await supabase.functions.invoke("submit-verification", {
         body: {
           admissionRoll: selectedStudent.admission_roll,
           applicationId: selectedStudent.application_id,
-          department: selectedStudent.department,
-          district: selectedDistrict,
-          meritRank: selectedStudent.merit,
+          department,
+          district,
+          meritRank: Number(meritRank),
           name: selectedStudent.name,
         },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      setVerified(true);
-      setVerifiedDistrict(selectedDistrict);
-      toast({ title: "District saved!", description: `Locked to ${selectedDistrict}.` });
-      // Close modal after short delay
-      setTimeout(() => setOpen(false), 1500);
+      setVerifiedDistrict(district);
+      setStep("done");
+      toast({
+        title: "🔥 District locked!",
+        description: `${selectedStudent.name} → ${district}`,
+      });
+      setTimeout(() => setOpen(false), 2200);
     } catch (error) {
+      setIgniting(false);
       toast({
         title: "Could not save",
-        description: error instanceof Error ? error.message : "Please try again later.",
+        description: error instanceof Error ? error.message : "Check your details and try again.",
         variant: "destructive",
       });
     } finally {
@@ -242,181 +235,289 @@ export function VerificationModal() {
     }
   };
 
-  const buttonLabel = verified
-    ? `✓ ${verifiedDistrict}`
-    : "Add Your District";
+  const buttonLabel = verifiedDistrict ? `🔥 ${verifiedDistrict}` : "Add Your District";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
-          variant={verified ? "secondary" : "default"}
+          variant={verifiedDistrict ? "secondary" : "default"}
           size="sm"
           className="gap-2"
-          disabled={verified}
+          disabled={!!verifiedDistrict}
         >
           <MapPin className="h-4 w-4" />
-          {buttonLabel}
+          <span className="hidden sm:inline">{buttonLabel}</span>
+          <span className="sm:hidden">{verifiedDistrict ? "✓" : "Add District"}</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Add Your District</DialogTitle>
-          <DialogDescription>
-            Sign in, find your name, confirm with department & merit rank, then select your home district.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-md p-0 gap-0 max-h-[100dvh] sm:max-h-[90vh] h-[100dvh] sm:h-auto rounded-none sm:rounded-lg overflow-hidden flex flex-col">
+        <DialogTitle className="sr-only">Add Your District</DialogTitle>
 
-        {/* Step 1: Auth */}
-        {!session ? (
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-foreground">Step 1: Sign in</h3>
-            {authChecking ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> Checking session...
+        {/* Progress bar */}
+        <div className="h-1 bg-muted">
+          <div
+            className="h-full bg-primary transition-all duration-300"
+            style={{
+              width:
+                step === "auth" ? "20%"
+                : step === "search" ? "40%"
+                : step === "confirm" ? "60%"
+                : step === "district" ? "85%"
+                : "100%",
+            }}
+          />
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5 sm:p-6">
+          {/* Step: Auth */}
+          {step === "auth" && (
+            <div className="space-y-5">
+              <div>
+                <h2 className="text-xl font-bold">Sign in</h2>
+                <p className="text-sm text-muted-foreground mt-1">Choose one to continue</p>
               </div>
-            ) : (
-              <Tabs defaultValue="google" className="space-y-3">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="google">Google</TabsTrigger>
-                  <TabsTrigger value="phone">Phone OTP</TabsTrigger>
-                </TabsList>
-                <TabsContent value="google">
-                  <Button onClick={handleGoogleSignIn} disabled={googleLoading} className="w-full">
-                    {googleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Chrome className="mr-2 h-4 w-4" />}
-                    Continue with Google
-                  </Button>
-                </TabsContent>
-                <TabsContent value="phone" className="space-y-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="modal-phone">Phone number</Label>
-                    <Input id="modal-phone" placeholder="+8801XXXXXXXXX" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} />
-                  </div>
-                  {!otpSent ? (
-                    <Button onClick={handleSendOtp} disabled={sendingOtp} className="w-full">
-                      {sendingOtp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Smartphone className="mr-2 h-4 w-4" />}
-                      Send verification code
+
+              {authChecking ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <Tabs defaultValue="google" className="space-y-4">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="google">Google</TabsTrigger>
+                    <TabsTrigger value="phone">Phone</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="google">
+                    <Button
+                      onClick={handleGoogleSignIn}
+                      disabled={googleLoading}
+                      size="lg"
+                      className="w-full"
+                    >
+                      {googleLoading
+                        ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        : <Chrome className="mr-2 h-4 w-4" />}
+                      Continue with Google
                     </Button>
-                  ) : (
-                    <div className="space-y-3">
-                      <Label>Enter 6-digit code</Label>
-                      <InputOTP maxLength={6} value={otp} onChange={setOtp}>
-                        <InputOTPGroup>
-                          {[0,1,2,3,4,5].map(i => <InputOTPSlot key={i} index={i} />)}
-                        </InputOTPGroup>
-                      </InputOTP>
-                      <Button onClick={handleVerifyOtp} disabled={verifyingOtp} className="w-full">
-                        {verifyingOtp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
-                        Verify code
-                      </Button>
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
-            )}
-          </div>
-        ) : (
-          /* Step 2: Match record + select district */
-          <div className="space-y-4">
-            {verified ? (
-              <div className="flex items-center gap-2 text-primary">
-                <CheckCircle2 className="h-5 w-5" />
-                <span className="font-semibold">District locked to {verifiedDistrict}</span>
-                <Lock className="h-4 w-4 ml-auto text-muted-foreground" />
-              </div>
-            ) : (
-              <>
-                <h3 className="text-sm font-semibold text-foreground">Step 2: Find your record & select district</h3>
-
-                {/* Name search */}
-                <div className="space-y-2">
-                  <Label htmlFor="modal-name">Your name</Label>
-                  <div className="relative">
-                    <Input
-                      id="modal-name"
-                      placeholder="Type at least 2 letters"
-                      value={nameQuery}
-                      onChange={(e) => {
-                        setNameQuery(e.target.value);
-                        if (selectedStudent && e.target.value !== selectedStudent.name) setSelectedStudent(null);
-                      }}
-                      disabled={directoryLoading}
-                    />
-                    {!selectedStudent && suggestions.length > 0 && (
-                      <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 max-h-48 overflow-y-auto rounded-lg border border-border bg-popover shadow-xl">
-                        {suggestions.map((s) => (
-                          <button
-                            key={`${s.admission_roll}-${s.application_id}`}
-                            type="button"
-                            className="flex w-full items-center px-3 py-2 text-left text-sm hover:bg-accent/40 border-b border-border/40 last:border-b-0"
-                            onClick={() => handleSelectStudent(s)}
-                          >
-                            <span className="font-medium">{s.name}</span>
-                          </button>
-                        ))}
-                      </div>
+                  </TabsContent>
+                  <TabsContent value="phone" className="space-y-3">
+                    {!otpSent ? (
+                      <>
+                        <Input
+                          placeholder="+8801XXXXXXXXX"
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value)}
+                          inputMode="tel"
+                          autoComplete="tel"
+                          className="h-12 text-base"
+                        />
+                        <Button
+                          onClick={handleSendOtp}
+                          disabled={sendingOtp}
+                          size="lg"
+                          className="w-full"
+                        >
+                          {sendingOtp
+                            ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            : <Smartphone className="mr-2 h-4 w-4" />}
+                          Send code
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm text-muted-foreground text-center">
+                          Code sent to {phoneNumber}
+                        </p>
+                        <div className="flex justify-center">
+                          <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+                            <InputOTPGroup>
+                              {[0,1,2,3,4,5].map((i) => <InputOTPSlot key={i} index={i} />)}
+                            </InputOTPGroup>
+                          </InputOTP>
+                        </div>
+                        <Button
+                          onClick={handleVerifyOtp}
+                          disabled={verifyingOtp || otp.length !== 6}
+                          size="lg"
+                          className="w-full"
+                        >
+                          {verifyingOtp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Verify
+                        </Button>
+                        <button
+                          type="button"
+                          onClick={() => { setOtpSent(false); setOtp(""); }}
+                          className="text-xs text-muted-foreground underline w-full text-center"
+                        >
+                          Use a different number
+                        </button>
+                      </>
                     )}
-                  </div>
-                </div>
+                  </TabsContent>
+                </Tabs>
+              )}
+            </div>
+          )}
 
-                {selectedStudent && (
-                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm font-medium">
-                    {selectedStudent.name}
-                  </div>
-                )}
-
-                {/* Department + Merit */}
-                <div className="grid gap-3 grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label>Department</Label>
-                    <Select value={department} onValueChange={setDepartment}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        {availableDepartments.map((d) => (
-                          <SelectItem key={d} value={d}>{d}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="modal-merit">Merit rank</Label>
-                    <Input id="modal-merit" type="number" placeholder="#" value={meritRank} onChange={(e) => setMeritRank(e.target.value)} />
-                  </div>
-                </div>
-
-                {(departmentMismatch || meritMismatch) && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Mismatch</AlertTitle>
-                    <AlertDescription>Department or merit rank doesn't match the selected record.</AlertDescription>
-                  </Alert>
-                )}
-
-                {/* District */}
-                <div className="space-y-1.5">
-                  <Label>Home district</Label>
-                  <Select value={selectedDistrict} onValueChange={setSelectedDistrict}>
-                    <SelectTrigger><SelectValue placeholder="Choose your district" /></SelectTrigger>
-                    <SelectContent>
-                      {DISTRICTS.map((d) => (
-                        <SelectItem key={d.code} value={d.name}>{d.name} ({d.division})</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Button onClick={handleSubmit} disabled={submitting || directoryLoading} className="w-full">
-                  {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Confirm & Lock District
-                </Button>
-
-                <p className="text-center text-xs text-muted-foreground">
-                  Once submitted, your district is permanently locked.
+          {/* Step: Search name */}
+          {step === "search" && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-bold">Find your name</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Search the RUET admission list
                 </p>
-              </>
-            )}
-          </div>
-        )}
+              </div>
+
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  autoFocus
+                  placeholder="Type your name..."
+                  value={nameQuery}
+                  onChange={(e) => setNameQuery(e.target.value)}
+                  disabled={directoryLoading}
+                  className="h-12 pl-10 text-base"
+                />
+              </div>
+
+              <div className="space-y-1.5 max-h-[50vh] overflow-y-auto -mx-1">
+                {directoryLoading && (
+                  <div className="flex justify-center py-6">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+                {!directoryLoading && suggestions.length === 0 && nameQuery.length >= 2 && (
+                  <p className="text-sm text-muted-foreground text-center py-6">
+                    No results. Keep typing.
+                  </p>
+                )}
+                {suggestions.map((s) => (
+                  <button
+                    key={`${s.admission_roll}-${s.application_id}`}
+                    type="button"
+                    onClick={() => handleSelectStudent(s)}
+                    className="w-full text-left rounded-lg border border-border bg-card hover:bg-accent/30 active:bg-accent/50 transition-colors p-3 mx-1"
+                  >
+                    <div className="font-medium">{s.name}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Step: Confirm identity */}
+          {step === "confirm" && selectedStudent && (
+            <div className="space-y-5">
+              <div>
+                <h2 className="text-xl font-bold">Confirm it's you</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Enter your department and merit rank
+                </p>
+              </div>
+
+              <div className="rounded-lg bg-primary/5 border border-primary/20 p-3 text-sm font-medium">
+                {selectedStudent.name}
+              </div>
+
+              <div className="space-y-3">
+                <Select value={department} onValueChange={setDepartment}>
+                  <SelectTrigger className="h-12 text-base">
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableDepartments.map((d) => (
+                      <SelectItem key={d} value={d}>{d}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="Merit rank"
+                  value={meritRank}
+                  onChange={(e) => setMeritRank(e.target.value)}
+                  className="h-12 text-base"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => { setStep("search"); setSelectedStudent(null); setNameQuery(""); }}
+                  className="flex-1"
+                >
+                  Back
+                </Button>
+                <Button onClick={handleConfirmIdentity} className="flex-1">
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step: District (gamified) */}
+          {step === "district" && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <Flame className="h-5 w-5 text-accent" />
+                  Light up your district
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Tap to ignite — this locks permanently
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {DISTRICTS.map((d) => {
+                  const burning = selectedDistrict === d.name && igniting;
+                  return (
+                    <button
+                      key={d.code}
+                      type="button"
+                      disabled={igniting || submitting}
+                      onClick={() => handleDistrictPick(d.name)}
+                      className={cn(
+                        "rounded-lg border-2 border-border bg-card p-3 text-sm font-medium transition-all",
+                        "hover:border-accent hover:bg-accent/10 active:scale-95",
+                        "disabled:opacity-40 disabled:cursor-not-allowed",
+                        burning && "district-burning bg-accent/20 border-accent disabled:opacity-100",
+                      )}
+                    >
+                      {d.name}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {(igniting || submitting) && (
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground pt-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Locking your district...
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step: Done */}
+          {step === "done" && verifiedDistrict && (
+            <div className="flex flex-col items-center justify-center py-10 space-y-4 text-center">
+              <div className="relative">
+                <Flame className="h-20 w-20 text-accent animate-pulse" />
+                <CheckCircle2 className="h-8 w-8 text-primary absolute -bottom-1 -right-1 bg-background rounded-full" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold">{verifiedDistrict}</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Locked to your record forever 🔥
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
