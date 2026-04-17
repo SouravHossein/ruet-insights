@@ -6,90 +6,93 @@
 
 @layer base {
   :root {
-    --background: 40 33% 96%;
-    --foreground: 160 80% 8%;
+    /* Ocean Light Theme */
+    --background: 210 33% 98%; /* Seafoam white */
+    --foreground: 220 80% 10%; /* Deep navy */
 
-    --card: 40 33% 98%;
-    --card-foreground: 160 80% 8%;
+    --card: 210 33% 100%;
+    --card-foreground: 220 80% 10%;
 
-    --popover: 40 33% 98%;
-    --popover-foreground: 160 80% 8%;
+    --popover: 210 33% 100%;
+    --popover-foreground: 220 80% 10%;
 
-    --primary: 160 80% 15%;
-    --primary-foreground: 40 33% 96%;
+    --primary: 215 80% 20%; /* Deep ocean blue */
+    --primary-foreground: 210 33% 98%;
 
-    --secondary: 160 50% 25%;
-    --secondary-foreground: 40 33% 96%;
+    --secondary: 195 60% 35%; /* Muted teal */
+    --secondary-foreground: 210 33% 98%;
 
-    --muted: 40 20% 90%;
-    --muted-foreground: 160 15% 40%;
+    --muted: 210 20% 92%;
+    --muted-foreground: 215 20% 45%;
 
-    --accent: 43 55% 54%;
-    --accent-foreground: 160 80% 8%;
+    --accent: 190 80% 45%; /* Vibrant aqua */
+    --accent-foreground: 210 33% 98%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 350 84% 60%; /* Kept red for alerts, slight coral tint */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 40 20% 85%;
-    --input: 40 20% 85%;
-    --ring: 160 80% 15%;
+    --border: 210 20% 88%;
+    --input: 210 20% 88%;
+    --ring: 215 80% 20%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 160 80% 12%;
-    --sidebar-foreground: 40 33% 92%;
-    --sidebar-primary: 43 55% 54%;
-    --sidebar-primary-foreground: 160 80% 8%;
-    --sidebar-accent: 160 60% 18%;
-    --sidebar-accent-foreground: 40 33% 96%;
-    --sidebar-border: 160 50% 20%;
-    --sidebar-ring: 43 55% 54%;
+    --sidebar-background: 220 80% 12%;
+    --sidebar-foreground: 210 33% 96%;
+    --sidebar-primary: 190 80% 45%;
+    --sidebar-primary-foreground: 220 80% 10%;
+    --sidebar-accent: 220 60% 20%;
+    --sidebar-accent-foreground: 210 33% 98%;
+    --sidebar-border: 220 50% 25%;
+    --sidebar-ring: 190 80% 45%;
 
-    --emerald-deep: 160 80% 12%;
-    --emerald-mid: 160 50% 25%;
-    --gold: 43 55% 54%;
-    --gold-light: 43 55% 70%;
-    --cream: 40 33% 96%;
-    --cream-dark: 40 20% 90%;
+    /* Retained original variable names for your tailwind config, but updated to oceanic values */
+    --emerald-deep: 220 80% 12%; /* Now Deep Navy */
+    --emerald-mid: 215 60% 35%;  /* Now Ocean Mid-blue */
+    --gold: 190 80% 45%;         /* Now Aqua */
+    --gold-light: 190 80% 65%;   /* Now Light Aqua */
+    --cream: 210 33% 98%;        /* Now Seafoam */
+    --cream-dark: 210 20% 92%;   /* Now Darker Seafoam */
   }
 
   .dark {
-    --background: 160 80% 4%;
-    --foreground: 40 33% 92%;
+    /* Ocean Dark Theme / Midnight Trench */
+    --background: 220 80% 4%;
+    --foreground: 210 33% 92%;
 
-    --card: 160 60% 8%;
-    --card-foreground: 40 33% 92%;
+    --card: 220 60% 8%;
+    --card-foreground: 210 33% 92%;
 
-    --popover: 160 60% 8%;
-    --popover-foreground: 40 33% 92%;
+    --popover: 220 60% 8%;
+    --popover-foreground: 210 33% 92%;
 
-    --primary: 43 55% 54%;
-    --primary-foreground: 160 80% 8%;
+    --primary: 190 80% 50%; /* Luminescent aqua */
+    --primary-foreground: 220 80% 8%;
 
-    --secondary: 160 50% 18%;
-    --secondary-foreground: 40 33% 92%;
+    --secondary: 195 50% 25%;
+    --secondary-foreground: 210 33% 92%;
 
-    --muted: 160 30% 15%;
-    --muted-foreground: 40 15% 60%;
+    --muted: 220 30% 15%;
+    --muted-foreground: 215 20% 60%;
 
-    --accent: 43 55% 54%;
-    --accent-foreground: 160 80% 4%;
+    --accent: 190 80% 50%;
+    --accent-foreground: 220 80% 4%;
 
-    --destructive: 0 62% 30%;
+    --destructive: 350 62% 40%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 160 30% 18%;
-    --input: 160 30% 18%;
-    --ring: 43 55% 54%;
+    --border: 220 30% 18%;
+    --input: 220 30% 18%;
+    --ring: 190 80% 50%;
 
-    --sidebar-background: 160 80% 6%;
-    --sidebar-foreground: 40 33% 92%;
-    --sidebar-primary: 43 55% 54%;
-    --sidebar-primary-foreground: 160 80% 4%;
-    --sidebar-accent: 160 60% 12%;
-    --sidebar-accent-foreground: 40 33% 96%;
-    --sidebar-border: 160 50% 15%;
-    --sidebar-ring: 43 55% 54%;
+    --sidebar-background: 220 80% 6%;
+    --sidebar-foreground: 210 33% 92%;
+    --sidebar-primary: 190 80% 50%;
+    --sidebar-primary-foreground: 220 80% 4%;
+    --sidebar-accent: 220 60% 12%;
+    --sidebar-accent-foreground: 210 33% 96%;
+    --sidebar-border: 220 50% 15%;
+    --sidebar-ring: 190 80% 50%;
   }
 }
 
@@ -109,13 +112,14 @@
 }
 
 @layer utilities {
+  /* Bioluminescent / Underwater vent effect (kept original class name) */
   .district-burning {
     position: relative;
     overflow: visible;
     box-shadow:
-      0 0 0 2px hsl(var(--gold) / 0.6),
-      0 0 24px 4px hsl(25 95% 55% / 0.55),
-      0 0 60px 10px hsl(15 90% 50% / 0.35);
+      0 0 0 2px hsl(var(--gold) / 0.6), /* Uses the new aqua 'gold' variable */
+      0 0 24px 4px hsl(190 95% 55% / 0.55), /* Cyan glow */
+      0 0 60px 10px hsl(210 90% 50% / 0.35); /* Deep blue outer glow */
     animation: ember-pulse 1.4s ease-in-out infinite;
   }
   .district-burning::before,
@@ -127,11 +131,12 @@
     width: 28px;
     height: 44px;
     transform: translateX(-50%);
+    /* Bioluminescent blue/teal flame gradient */
     background: radial-gradient(
       ellipse at 50% 100%,
-      hsl(50 100% 70% / 0.95) 0%,
-      hsl(30 100% 55% / 0.85) 35%,
-      hsl(10 90% 45% / 0.6) 65%,
+      hsl(180 100% 80% / 0.95) 0%,   /* Bright icy core */
+      hsl(190 100% 55% / 0.85) 35%,  /* Vibrant aqua */
+      hsl(210 90% 45% / 0.6) 65%,    /* Deep ocean blue */
       transparent 80%
     );
     border-radius: 50% 50% 30% 30% / 60% 60% 40% 40%;
@@ -145,6 +150,12 @@
     animation-duration: 0.32s;
     opacity: 0.8;
   }
+
+  .district-burning-path {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: district-burn-pulse 1.25s ease-in-out 1;
+  }
 }
 
 @keyframes flame-flicker {
@@ -157,13 +168,32 @@
   0%, 100% {
     box-shadow:
       0 0 0 2px hsl(var(--gold) / 0.6),
-      0 0 24px 4px hsl(25 95% 55% / 0.55),
-      0 0 60px 10px hsl(15 90% 50% / 0.35);
+      0 0 24px 4px hsl(190 95% 55% / 0.55),
+      0 0 60px 10px hsl(210 90% 50% / 0.35);
   }
   50% {
     box-shadow:
       0 0 0 2px hsl(var(--gold) / 0.8),
-      0 0 32px 8px hsl(25 95% 60% / 0.7),
-      0 0 80px 16px hsl(15 90% 55% / 0.5);
+      0 0 32px 8px hsl(190 95% 60% / 0.7),
+      0 0 80px 16px hsl(210 90% 55% / 0.5);
+  }
+}
+
+@keyframes district-burn-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.94;
+  }
+  35% {
+    transform: scale(1.02);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(0.985);
+    opacity: 0.98;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
   }
 }

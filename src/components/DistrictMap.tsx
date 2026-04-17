@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { BarChart3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -21,6 +21,7 @@ interface DistrictMapProps {
 interface HeatmapDistrict {
   count: number;
   division: string;
+  isBurning: boolean;
   isHovered: boolean;
   isSelected: boolean;
   isSuccess: boolean;
@@ -59,6 +60,7 @@ export function DistrictMap({
 }: DistrictMapProps) {
   const [districtGeoJson, setDistrictGeoJson] = useState<DistrictFeatureCollection | null>(null);
   const [hoveredDistrict, setHoveredDistrict] = useState<string | null>(null);
+  const [burningDistrict, setBurningDistrict] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -85,6 +87,18 @@ export function DistrictMap({
     };
   }, []);
 
+  useEffect(() => {
+    const targetDistrict = successDistrict ?? selectedDistrict;
+    if (!targetDistrict) return;
+
+    setBurningDistrict(targetDistrict);
+    const timeoutId = window.setTimeout(() => {
+      setBurningDistrict((current) => (current === targetDistrict ? null : current));
+    }, 1400);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [selectedDistrict, successDistrict]);
+
   const maxCount = useMemo(() => {
     const values = Object.values(districtCounts);
     return values.length > 0 ? Math.max(...values) : 0;
@@ -109,7 +123,7 @@ export function DistrictMap({
     return HEAT_COLORS[colorIndex];
   };
 
-  const projectPoint = ([lng, lat]: [number, number]) => {
+  const projectPoint = useCallback(([lng, lat]: [number, number]) => {
     const x =
       SVG_PADDING +
       ((lng - MAP_BOUNDS.minLng) / (MAP_BOUNDS.maxLng - MAP_BOUNDS.minLng)) *
@@ -121,36 +135,42 @@ export function DistrictMap({
         (SVG_HEIGHT - SVG_PADDING * 2);
 
     return [x, y] as const;
-  };
+  }, []);
 
-  const ringToPath = (ring: [number, number][]) =>
-    `${ring
-      .map((point, index) => {
-        const [x, y] = projectPoint(point);
-        return `${index === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
-      })
-      .join(" ")} Z`;
+  const ringToPath = useCallback(
+    (ring: [number, number][]) =>
+      `${ring
+        .map((point, index) => {
+          const [x, y] = projectPoint(point);
+          return `${index === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
+        })
+        .join(" ")} Z`,
+    [projectPoint],
+  );
 
-  const centroid = (feature: DistrictFeature) => {
-    const ring =
-      feature.geometry.type === "Polygon"
-        ? feature.geometry.coordinates[0]
-        : feature.geometry.coordinates[0][0];
+  const centroid = useCallback(
+    (feature: DistrictFeature) => {
+      const ring =
+        feature.geometry.type === "Polygon"
+          ? feature.geometry.coordinates[0]
+          : feature.geometry.coordinates[0][0];
 
-    let totalX = 0;
-    let totalY = 0;
+      let totalX = 0;
+      let totalY = 0;
 
-    ring.forEach((point) => {
-      const [x, y] = projectPoint(point as [number, number]);
-      totalX += x;
-      totalY += y;
-    });
+      ring.forEach((point) => {
+        const [x, y] = projectPoint(point as [number, number]);
+        totalX += x;
+        totalY += y;
+      });
 
-    return {
-      x: totalX / ring.length,
-      y: totalY / ring.length,
-    };
-  };
+      return {
+        x: totalX / ring.length,
+        y: totalY / ring.length,
+      };
+    },
+    [projectPoint],
+  );
 
   const districts = useMemo<HeatmapDistrict[]>(() => {
     if (!districtGeoJson) return [];
@@ -161,6 +181,7 @@ export function DistrictMap({
       const isSelected = selectedDistrict === name;
       const isHovered = hoveredDistrict === name;
       const isSuccess = successDistrict === name;
+      const isBurning = burningDistrict === name;
       const center = centroid(feature);
       const path =
         feature.geometry.type === "Polygon"
@@ -170,17 +191,27 @@ export function DistrictMap({
       return {
         count,
         division: feature.properties.division,
+        isBurning,
         isHovered,
         isSelected,
         isSuccess,
-        label: count >= Math.max(8, Math.ceil(maxCount * 0.2)) ? name : null,
+        label: name,
         name,
         path,
         x: center.x,
         y: center.y,
       };
     });
-  }, [districtGeoJson, districtCounts, hoveredDistrict, maxCount, selectedDistrict, successDistrict]);
+  }, [
+    burningDistrict,
+    centroid,
+    districtGeoJson,
+    districtCounts,
+    hoveredDistrict,
+    ringToPath,
+    selectedDistrict,
+    successDistrict,
+  ]);
 
   const topDistricts = useMemo(
     () =>
@@ -207,8 +238,8 @@ export function DistrictMap({
 
   const mapDescription =
     mode === "picker"
-      ? "Select your district from a compact SVG heatmap instead of a full interactive map."
-      : "District heatmap of verified RUET students across Bangladesh.";
+      ? "Tap your district directly on the map. A quick burn pulse confirms your selection."
+      : "Tap any district to focus students from that district while keeping nationwide context.";
 
   return (
     <Card className="border-border/50">
@@ -220,7 +251,7 @@ export function DistrictMap({
         <p className="text-xs text-muted-foreground">{mapDescription}</p>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_260px]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
           <div className="relative overflow-hidden rounded-[1.75rem] border border-border/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.55),rgba(241,233,220,0.75))] p-4">
             {loadError ? (
               <div className="flex aspect-[5/6] items-center justify-center px-6 text-center text-sm text-destructive">
@@ -241,6 +272,7 @@ export function DistrictMap({
                   <path
                     key={district.name}
                     d={district.path}
+                    className={district.isBurning ? "district-burning-path" : undefined}
                     fill={getDistrictFill(district.count, district.isSelected, district.isSuccess)}
                     stroke={district.isHovered ? "#7c2d12" : district.isSelected ? "#9a3412" : "#d9c6ac"}
                     strokeWidth={district.isSelected || district.isHovered ? 2 : 0.9}
@@ -248,6 +280,8 @@ export function DistrictMap({
                       cursor: mode === "picker" || onDistrictClick ? "pointer" : "default",
                       filter: district.isSuccess
                         ? "drop-shadow(0 0 12px rgba(240, 74, 23, 0.45))"
+                        : district.isBurning
+                          ? "drop-shadow(0 0 16px rgba(255, 107, 24, 0.8)) drop-shadow(0 0 30px rgba(255, 184, 28, 0.7))"
                         : district.isSelected
                           ? "drop-shadow(0 0 10px rgba(217, 119, 6, 0.22))"
                           : district.isHovered
@@ -261,23 +295,38 @@ export function DistrictMap({
                   />
                 ))}
 
-                {districts
-                  .filter((district) => district.label)
-                  .map((district) => (
+                {districts.map((district) => (
+                  <g key={`${district.name}-label`} pointerEvents="none">
                     <text
-                      key={`${district.name}-label`}
                       x={district.x}
                       y={district.y}
                       textAnchor="middle"
-                      fontSize={district.count > 50 ? 10 : 8}
-                      fill={district.count > 25 ? "#fffdf7" : "#7c2d12"}
-                      fontWeight={700}
+                      dominantBaseline="middle"
+                      fontSize={district.isSelected ? 8 : 7}
+                      fill="transparent"
+                      stroke={district.isSelected ? "#20110a" : "#ffffff"}
+                      strokeWidth={district.isSelected ? 2.8 : 2.2}
+                      fontWeight={800}
                       pointerEvents="none"
-                      style={{ letterSpacing: "0.04em" }}
+                      style={{ letterSpacing: "0.03em", paintOrder: "stroke" }}
                     >
                       {district.label!.length > 10 ? `${district.label!.slice(0, 9)}.` : district.label}
                     </text>
-                  ))}
+                    <text
+                      x={district.x}
+                      y={district.y}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      fontSize={district.isSelected ? 8 : 7}
+                      fill={district.isSelected ? "#fff7e8" : "#6b280f"}
+                      fontWeight={700}
+                      pointerEvents="none"
+                      style={{ letterSpacing: "0.03em" }}
+                    >
+                      {district.label!.length > 10 ? `${district.label!.slice(0, 9)}.` : district.label}
+                    </text>
+                  </g>
+                ))}
               </svg>
             )}
           </div>
