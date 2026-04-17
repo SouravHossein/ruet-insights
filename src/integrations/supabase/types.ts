@@ -35,6 +35,44 @@ export type Database = {
         }
         Relationships: []
       }
+      student_verifications: {
+        Row: {
+          auth_provider: string
+          contact_hint: string | null
+          created_at: string
+          id: string
+          ip_hash: string | null
+          student_id: string
+          user_id: string
+        }
+        Insert: {
+          auth_provider?: string
+          contact_hint?: string | null
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          student_id: string
+          user_id: string
+        }
+        Update: {
+          auth_provider?: string
+          contact_hint?: string | null
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          student_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_verifications_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       students: {
         Row: {
           admission_roll: string
