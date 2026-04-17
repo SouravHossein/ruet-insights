@@ -130,14 +130,34 @@ Deno.serve(async (request) => {
     const { data: studentMatches, error: studentError } = await query.limit(2);
     if (studentError) throw studentError;
 
-    if (!studentMatches || studentMatches.length === 0) {
-      return jsonResponse({ error: GENERIC_ERROR }, 404);
-    }
-    if (studentMatches.length > 1) {
+    let student = studentMatches && studentMatches.length === 1 ? studentMatches[0] : null;
+
+    if (studentMatches && studentMatches.length > 1) {
       return jsonResponse({ error: GENERIC_ERROR }, 409);
     }
 
-    const student = studentMatches[0];
+    // Fallback: student not yet seeded in DB — create from payload (source of truth: public roster JSON)
+    if (!student) {
+      if (!payload.name || !payload.admissionRoll) {
+        return jsonResponse({ error: GENERIC_ERROR }, 404);
+      }
+      const { data: inserted, error: insertErr } = await serviceClient
+        .from("students")
+        .insert({
+          name: payload.name,
+          department: payload.department,
+          merit_rank: payload.meritRank,
+          admission_roll: payload.admissionRoll,
+          application_id: payload.applicationId ?? null,
+        })
+        .select("id, department, district, is_locked, merit_rank, name, admission_roll")
+        .single();
+      if (insertErr || !inserted) {
+        console.error("student insert failed", insertErr);
+        return jsonResponse({ error: GENERIC_ERROR }, 500);
+      }
+      student = inserted;
+    }
 
     if (payload.name && student.name.trim().toLowerCase() !== payload.name.trim().toLowerCase()) {
       return jsonResponse({ error: GENERIC_ERROR }, 409);
