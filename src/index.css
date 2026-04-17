@@ -107,3 +107,63 @@
     font-family: 'Inter', sans-serif;
   }
 }
+
+@layer utilities {
+  .district-burning {
+    position: relative;
+    overflow: visible;
+    box-shadow:
+      0 0 0 2px hsl(var(--gold) / 0.6),
+      0 0 24px 4px hsl(25 95% 55% / 0.55),
+      0 0 60px 10px hsl(15 90% 50% / 0.35);
+    animation: ember-pulse 1.4s ease-in-out infinite;
+  }
+  .district-burning::before,
+  .district-burning::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    width: 28px;
+    height: 44px;
+    transform: translateX(-50%);
+    background: radial-gradient(
+      ellipse at 50% 100%,
+      hsl(50 100% 70% / 0.95) 0%,
+      hsl(30 100% 55% / 0.85) 35%,
+      hsl(10 90% 45% / 0.6) 65%,
+      transparent 80%
+    );
+    border-radius: 50% 50% 30% 30% / 60% 60% 40% 40%;
+    pointer-events: none;
+    animation: flame-flicker 0.45s ease-in-out infinite alternate;
+  }
+  .district-burning::after {
+    width: 18px;
+    height: 30px;
+    bottom: calc(100% + 8px);
+    animation-duration: 0.32s;
+    opacity: 0.8;
+  }
+}
+
+@keyframes flame-flicker {
+  0% { transform: translateX(-50%) scaleY(1) scaleX(1) rotate(-2deg); opacity: 0.95; }
+  50% { transform: translateX(-50%) scaleY(1.15) scaleX(0.9) rotate(2deg); opacity: 1; }
+  100% { transform: translateX(-50%) scaleY(0.95) scaleX(1.05) rotate(-1deg); opacity: 0.85; }
+}
+
+@keyframes ember-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 2px hsl(var(--gold) / 0.6),
+      0 0 24px 4px hsl(25 95% 55% / 0.55),
+      0 0 60px 10px hsl(15 90% 50% / 0.35);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px hsl(var(--gold) / 0.8),
+      0 0 32px 8px hsl(25 95% 60% / 0.7),
+      0 0 80px 16px hsl(15 90% 55% / 0.5);
+  }
+}

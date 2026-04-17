@@ -9,10 +9,12 @@ const corsHeaders = {
 const MAX_VERIFICATIONS_PER_IP = 3;
 
 interface VerificationPayload {
-  studentId: string;
+  admissionRoll?: string;
+  applicationId?: string | null;
   department: string;
   district: string;
   meritRank: number;
+  name?: string;
 }
 
 const jsonResponse = (body: unknown, status = 200) =>
@@ -28,7 +30,6 @@ const getClientIp = (request: Request) => {
     request.headers.get("fly-client-ip") ??
     request.headers.get("x-real-ip") ??
     "";
-
   return headerValue.split(",")[0]?.trim() || null;
 };
 
@@ -41,17 +42,17 @@ const hashValue = async (value: string) => {
 
 const maskContact = (value: string | null) => {
   if (!value) return null;
-
   if (value.includes("@")) {
     const [local, domain] = value.split("@");
     const visible = local.slice(0, 2);
     return `${visible}${"*".repeat(Math.max(1, local.length - 2))}@${domain}`;
   }
-
   const digits = value.replace(/\D/g, "");
   if (digits.length < 4) return value;
   return `${"*".repeat(Math.max(1, digits.length - 4))}${digits.slice(-4)}`;
 };
+
+const GENERIC_ERROR = "Could not save your district. Please double-check your details and try again.";
 
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
@@ -64,15 +65,12 @@ Deno.serve(async (request) => {
       return jsonResponse({ error: "Please sign in before verifying." }, 401);
     }
 
-    const jwt = authorization.replace(/^Bearer\s+/i, "").trim();
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
     const authClient = createClient(supabaseUrl, anonKey, {
-      global: {
-        headers: { Authorization: authorization },
-      },
+      global: { headers: { Authorization: authorization } },
     });
 
     const {
@@ -84,121 +82,79 @@ Deno.serve(async (request) => {
       return jsonResponse({ error: "Your session is no longer valid. Please sign in again." }, 401);
     }
 
-    const { data: assurance, error: assuranceError } =
-      await authClient.auth.mfa.getAuthenticatorAssuranceLevel(jwt);
-
-    if (assuranceError) {
-      throw assuranceError;
-    }
-
-    if (assurance?.currentLevel !== "aal2") {
-      return jsonResponse(
-        { error: "Phone MFA is required before you can lock a district." },
-        403,
-      );
-    }
-
     const payload = (await request.json()) as VerificationPayload;
-    if (!payload?.studentId || !payload?.department || !payload?.district || !payload?.meritRank) {
+    if (!payload?.department || !payload?.district || !payload?.meritRank) {
       return jsonResponse({ error: "Incomplete verification request." }, 400);
     }
 
     const serviceClient = createClient(supabaseUrl, serviceRoleKey);
     const now = new Date().toISOString();
 
-    const { data: existingUserVerification, error: existingUserVerificationError } =
-      await serviceClient
-        .from("student_verifications")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-    if (existingUserVerificationError) {
-      throw existingUserVerificationError;
-    }
+    // One verification per user
+    const { data: existingUserVerification } = await serviceClient
+      .from("student_verifications")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
     if (existingUserVerification) {
-      return jsonResponse(
-        {
-          error:
-            "This Google account already verified one RUET student. Please use the same account to revisit that submission.",
-        },
-        409,
-      );
+      return jsonResponse({ error: GENERIC_ERROR }, 409);
     }
 
+    // IP throttle (silent — generic error)
     const clientIp = getClientIp(request);
     const ipHash = clientIp
       ? await hashValue(clientIp)
       : await hashValue(`missing-ip:${user.id}`);
 
-    const { count, error: ipCountError } = await serviceClient
+    const { count } = await serviceClient
       .from("student_verifications")
       .select("id", { count: "exact", head: true })
       .eq("ip_hash", ipHash);
 
-    if (ipCountError) {
-      throw ipCountError;
-    }
-
     if ((count ?? 0) >= MAX_VERIFICATIONS_PER_IP) {
-      return jsonResponse(
-        {
-          error:
-            "Too many verifications have already been submitted from this connection. If you are on shared Wi-Fi, try mobile data or another trusted network and try again.",
-        },
-        429,
-      );
+      return jsonResponse({ error: GENERIC_ERROR }, 429);
     }
 
-    const { data: student, error: studentError } = await serviceClient
+    // Find student by department + merit_rank (and name if provided for safety)
+    let query = serviceClient
       .from("students")
-      .select("id, department, district, is_locked, merit_rank, name")
-      .eq("id", payload.studentId)
-      .maybeSingle();
+      .select("id, department, district, is_locked, merit_rank, name, admission_roll")
+      .eq("department", payload.department)
+      .eq("merit_rank", payload.meritRank);
 
-    if (studentError) {
-      throw studentError;
+    if (payload.admissionRoll) {
+      query = query.eq("admission_roll", payload.admissionRoll);
     }
 
-    if (!student) {
-      return jsonResponse({ error: "The selected student record was not found." }, 404);
+    const { data: studentMatches, error: studentError } = await query.limit(2);
+    if (studentError) throw studentError;
+
+    if (!studentMatches || studentMatches.length === 0) {
+      return jsonResponse({ error: GENERIC_ERROR }, 404);
+    }
+    if (studentMatches.length > 1) {
+      return jsonResponse({ error: GENERIC_ERROR }, 409);
+    }
+
+    const student = studentMatches[0];
+
+    if (payload.name && student.name.trim().toLowerCase() !== payload.name.trim().toLowerCase()) {
+      return jsonResponse({ error: GENERIC_ERROR }, 409);
     }
 
     if (student.is_locked) {
-      return jsonResponse(
-        {
-          error: `This admission record is already locked with ${student.district ?? "a saved district"}.`,
-        },
-        409,
-      );
+      return jsonResponse({ error: GENERIC_ERROR }, 409);
     }
 
-    if (student.department !== payload.department || student.merit_rank !== payload.meritRank) {
-      return jsonResponse(
-        {
-          error: "Department or merit rank does not match the selected student record.",
-        },
-        409,
-      );
-    }
-
-    const { data: existingStudentVerification, error: existingStudentVerificationError } =
-      await serviceClient
-        .from("student_verifications")
-        .select("id")
-        .eq("student_id", payload.studentId)
-        .maybeSingle();
-
-    if (existingStudentVerificationError) {
-      throw existingStudentVerificationError;
-    }
+    const { data: existingStudentVerification } = await serviceClient
+      .from("student_verifications")
+      .select("id")
+      .eq("student_id", student.id)
+      .maybeSingle();
 
     if (existingStudentVerification) {
-      return jsonResponse(
-        { error: "This student record already has a verification entry." },
-        409,
-      );
+      return jsonResponse({ error: GENERIC_ERROR }, 409);
     }
 
     const { error: updateError } = await serviceClient
@@ -209,26 +165,18 @@ Deno.serve(async (request) => {
         verification_status: "verified",
         verified_at: now,
       })
-      .eq("id", payload.studentId);
+      .eq("id", student.id);
 
-    if (updateError) {
-      throw updateError;
-    }
+    if (updateError) throw updateError;
 
     const contactHint = maskContact(user.phone || user.email || null);
-    const { error: auditInsertError } = await serviceClient
-      .from("student_verifications")
-      .insert({
-        auth_provider: String(user.app_metadata?.provider ?? "authenticated"),
-        contact_hint: contactHint,
-        ip_hash: ipHash,
-        student_id: payload.studentId,
-        user_id: user.id,
-      });
-
-    if (auditInsertError) {
-      throw auditInsertError;
-    }
+    await serviceClient.from("student_verifications").insert({
+      auth_provider: String(user.app_metadata?.provider ?? "authenticated"),
+      contact_hint: contactHint,
+      ip_hash: ipHash,
+      student_id: student.id,
+      user_id: user.id,
+    });
 
     return jsonResponse({
       student: {
@@ -239,11 +187,7 @@ Deno.serve(async (request) => {
       },
     });
   } catch (error) {
-    return jsonResponse(
-      {
-        error: error instanceof Error ? error.message : "Verification failed unexpectedly.",
-      },
-      500,
-    );
+    console.error("submit-verification error", error);
+    return jsonResponse({ error: GENERIC_ERROR }, 500);
   }
 });

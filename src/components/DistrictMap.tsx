@@ -141,7 +141,7 @@ export function DistrictMap({
     let totalY = 0;
 
     ring.forEach((point) => {
-      const [x, y] = projectPoint(point);
+      const [x, y] = projectPoint(point as [number, number]);
       totalX += x;
       totalY += y;
     });
@@ -164,8 +164,8 @@ export function DistrictMap({
       const center = centroid(feature);
       const path =
         feature.geometry.type === "Polygon"
-          ? ringToPath(feature.geometry.coordinates[0])
-          : feature.geometry.coordinates.map((polygon) => ringToPath(polygon[0])).join(" ");
+          ? ringToPath(feature.geometry.coordinates[0] as [number, number][])
+          : feature.geometry.coordinates.map((polygon) => ringToPath(polygon[0] as [number, number][])).join(" ");
 
       return {
         count,
