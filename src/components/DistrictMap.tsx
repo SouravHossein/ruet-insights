@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BarChart3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getDistrictCoordinate } from "@/data/bangladesh-district-coordinates";
 import {
   canonicalizeDistrictName,
   loadDistrictFeatureCollection,
@@ -182,7 +183,10 @@ export function DistrictMap({
       const isHovered = hoveredDistrict === name;
       const isSuccess = successDistrict === name;
       const isBurning = burningDistrict === name;
-      const center = centroid(feature);
+      const districtCoordinate = getDistrictCoordinate(name);
+      const [relativeX, relativeY] = districtCoordinate
+        ? projectPoint([districtCoordinate.lng, districtCoordinate.lat])
+        : [centroid(feature).x, centroid(feature).y];
       const path =
         feature.geometry.type === "Polygon"
           ? ringToPath(feature.geometry.coordinates[0] as [number, number][])
@@ -198,8 +202,8 @@ export function DistrictMap({
         label: name,
         name,
         path,
-        x: center.x,
-        y: center.y,
+        x: relativeX,
+        y: relativeY,
       };
     });
   }, [
@@ -208,6 +212,7 @@ export function DistrictMap({
     districtGeoJson,
     districtCounts,
     hoveredDistrict,
+    projectPoint,
     ringToPath,
     selectedDistrict,
     successDistrict,

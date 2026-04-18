@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Space+Mono:wght@400;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,194 +6,160 @@
 
 @layer base {
   :root {
-    /* Ocean Light Theme */
-    --background: 210 33% 98%; /* Seafoam white */
-    --foreground: 220 80% 10%; /* Deep navy */
+    /* Retro Emerald & Gold Palette */
+    --background: 160 80% 4%; /* Deep Obsidian */
+    --foreground: 160 80% 85%; /* Pale Phosphor Green */
 
-    --card: 210 33% 100%;
-    --card-foreground: 220 80% 10%;
+    --card: 160 80% 6%;
+    --card-foreground: 160 80% 85%;
 
-    --popover: 210 33% 100%;
-    --popover-foreground: 220 80% 10%;
+    --popover: 160 80% 6%;
+    --popover-foreground: 160 80% 85%;
 
-    --primary: 215 80% 20%; /* Deep ocean blue */
-    --primary-foreground: 210 33% 98%;
+    --primary: 160 100% 50%; /* Pure Matrix Green */
+    --primary-foreground: 160 80% 4%;
 
-    --secondary: 195 60% 35%; /* Muted teal */
-    --secondary-foreground: 210 33% 98%;
+    --secondary: 43 100% 50%; /* Amber Gold */
+    --secondary-foreground: 160 80% 4%;
 
-    --muted: 210 20% 92%;
-    --muted-foreground: 215 20% 45%;
+    --muted: 160 30% 15%;
+    --muted-foreground: 160 20% 60%;
 
-    --accent: 190 80% 45%; /* Vibrant aqua */
-    --accent-foreground: 210 33% 98%;
+    --accent: 43 100% 50%;
+    --accent-foreground: 160 80% 4%;
 
-    --destructive: 350 84% 60%; /* Kept red for alerts, slight coral tint */
+    --destructive: 0 100% 50%; /* Pure Warning Red */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 20% 88%;
-    --input: 210 20% 88%;
-    --ring: 215 80% 20%;
+    --border: 160 80% 15%;
+    --input: 160 80% 10%;
+    --ring: 160 100% 50%;
 
-    --radius: 0.5rem;
+    --radius: 0px; /* Sharp corners for retro feel */
 
-    --sidebar-background: 220 80% 12%;
-    --sidebar-foreground: 210 33% 96%;
-    --sidebar-primary: 190 80% 45%;
-    --sidebar-primary-foreground: 220 80% 10%;
-    --sidebar-accent: 220 60% 20%;
-    --sidebar-accent-foreground: 210 33% 98%;
-    --sidebar-border: 220 50% 25%;
-    --sidebar-ring: 190 80% 45%;
+    --sidebar-background: 160 80% 2%;
+    --sidebar-foreground: 160 80% 85%;
+    --sidebar-primary: 160 100% 50%;
+    --sidebar-primary-foreground: 160 80% 4%;
+    --sidebar-accent: 160 80% 10%;
+    --sidebar-accent-foreground: 43 100% 50%;
+    --sidebar-border: 160 80% 15%;
+    --sidebar-ring: 160 100% 50%;
 
-    /* Retained original variable names for your tailwind config, but updated to oceanic values */
-    --emerald-deep: 220 80% 12%; /* Now Deep Navy */
-    --emerald-mid: 215 60% 35%;  /* Now Ocean Mid-blue */
-    --gold: 190 80% 45%;         /* Now Aqua */
-    --gold-light: 190 80% 65%;   /* Now Light Aqua */
-    --cream: 210 33% 98%;        /* Now Seafoam */
-    --cream-dark: 210 20% 92%;   /* Now Darker Seafoam */
+    /* Retro Custom Colors */
+    --emerald-glow: 160 100% 50%;
+    --gold-glow: 43 100% 50%;
+    --crt-scanline: rgba(18, 16, 16, 0.1);
   }
 
+  /* Dark mode is the default for retro-tech, but we can intensify it */
   .dark {
-    /* Ocean Dark Theme / Midnight Trench */
-    --background: 220 80% 4%;
-    --foreground: 210 33% 92%;
-
-    --card: 220 60% 8%;
-    --card-foreground: 210 33% 92%;
-
-    --popover: 220 60% 8%;
-    --popover-foreground: 210 33% 92%;
-
-    --primary: 190 80% 50%; /* Luminescent aqua */
-    --primary-foreground: 220 80% 8%;
-
-    --secondary: 195 50% 25%;
-    --secondary-foreground: 210 33% 92%;
-
-    --muted: 220 30% 15%;
-    --muted-foreground: 215 20% 60%;
-
-    --accent: 190 80% 50%;
-    --accent-foreground: 220 80% 4%;
-
-    --destructive: 350 62% 40%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 220 30% 18%;
-    --input: 220 30% 18%;
-    --ring: 190 80% 50%;
-
-    --sidebar-background: 220 80% 6%;
-    --sidebar-foreground: 210 33% 92%;
-    --sidebar-primary: 190 80% 50%;
-    --sidebar-primary-foreground: 220 80% 4%;
-    --sidebar-accent: 220 60% 12%;
-    --sidebar-accent-foreground: 210 33% 96%;
-    --sidebar-border: 220 50% 15%;
-    --sidebar-ring: 190 80% 50%;
+    --background: 0 0% 0%;
+    --primary: 43 100% 50%; /* Flip to Gold primary in dark mode */
+    --primary-foreground: 0 0% 0%;
   }
 }
 
 @layer base {
   * {
     @apply border-border;
+    text-shadow: 0 0 5px hsl(var(--primary) / 0.5);
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
-    font-family: 'Inter', sans-serif;
+    @apply bg-background text-foreground;
+    font-family: 'Space Mono', monospace;
+    background-image: linear-gradient(
+      var(--crt-scanline) 50%, 
+      transparent 50%
+    );
+    background-size: 100% 4px;
+    letter-spacing: 0.05em;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Inter', sans-serif;
+    font-family: 'VT323', monospace;
+    text-transform: uppercase;
+    @apply tracking-widest;
+  }
+
+  /* Retro CRT Flickering Effect */
+  body::after {
+    content: " ";
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: rgba(18, 16, 16, 0.03);
+    opacity: 0;
+    z-index: 9999;
+    pointer-events: none;
+    animation: crt-flicker 0.15s infinite;
   }
 }
 
 @layer utilities {
-  /* Bioluminescent / Underwater vent effect (kept original class name) */
   .district-burning {
     position: relative;
     overflow: visible;
+    border: 2px solid hsl(var(--secondary));
+    background: black;
     box-shadow:
-      0 0 0 2px hsl(var(--gold) / 0.6), /* Uses the new aqua 'gold' variable */
-      0 0 24px 4px hsl(190 95% 55% / 0.55), /* Cyan glow */
-      0 0 60px 10px hsl(210 90% 50% / 0.35); /* Deep blue outer glow */
+      0 0 10px hsl(var(--secondary) / 0.8),
+      inset 0 0 15px hsl(var(--secondary) / 0.4);
     animation: ember-pulse 1.4s ease-in-out infinite;
   }
+
+  /* Pixelated Flame Effect */
   .district-burning::before,
   .district-burning::after {
-    content: "";
+    content: "▲"; /* Use a character for retro-text-art feel */
+    font-family: 'VT323', monospace;
+    font-size: 2rem;
     position: absolute;
     left: 50%;
     bottom: 100%;
-    width: 28px;
-    height: 44px;
+    color: hsl(var(--secondary));
     transform: translateX(-50%);
-    /* Bioluminescent blue/teal flame gradient */
-    background: radial-gradient(
-      ellipse at 50% 100%,
-      hsl(180 100% 80% / 0.95) 0%,   /* Bright icy core */
-      hsl(190 100% 55% / 0.85) 35%,  /* Vibrant aqua */
-      hsl(210 90% 45% / 0.6) 65%,    /* Deep ocean blue */
-      transparent 80%
-    );
-    border-radius: 50% 50% 30% 30% / 60% 60% 40% 40%;
+    text-shadow: 0 0 10px hsl(var(--secondary));
     pointer-events: none;
     animation: flame-flicker 0.45s ease-in-out infinite alternate;
   }
+
   .district-burning::after {
-    width: 18px;
-    height: 30px;
-    bottom: calc(100% + 8px);
+    content: "△";
+    font-size: 1.5rem;
+    bottom: calc(100% + 10px);
     animation-duration: 0.32s;
-    opacity: 0.8;
+    opacity: 0.7;
   }
 
-  .district-burning-path {
-    transform-box: fill-box;
-    transform-origin: center;
-    animation: district-burn-pulse 1.25s ease-in-out 1;
+  /* Glassmorphism/Terminal effect */
+  .retro-panel {
+    @apply bg-black/80 border-2 border-primary/50 p-4;
+    box-shadow: 5px 5px 0px hsl(var(--primary) / 0.3);
   }
 }
 
 @keyframes flame-flicker {
-  0% { transform: translateX(-50%) scaleY(1) scaleX(1) rotate(-2deg); opacity: 0.95; }
-  50% { transform: translateX(-50%) scaleY(1.15) scaleX(0.9) rotate(2deg); opacity: 1; }
-  100% { transform: translateX(-50%) scaleY(0.95) scaleX(1.05) rotate(-1deg); opacity: 0.85; }
+  0% { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateX(-50%) translateY(-5px) scale(1.2); opacity: 0.5; }
 }
 
 @keyframes ember-pulse {
   0%, 100% {
-    box-shadow:
-      0 0 0 2px hsl(var(--gold) / 0.6),
-      0 0 24px 4px hsl(190 95% 55% / 0.55),
-      0 0 60px 10px hsl(210 90% 50% / 0.35);
+    box-shadow: 0 0 5px hsl(var(--secondary) / 0.6);
+    filter: brightness(1);
   }
   50% {
-    box-shadow:
-      0 0 0 2px hsl(var(--gold) / 0.8),
-      0 0 32px 8px hsl(190 95% 60% / 0.7),
-      0 0 80px 16px hsl(210 90% 55% / 0.5);
+    box-shadow: 0 0 20px hsl(var(--secondary) / 0.9);
+    filter: brightness(1.2);
   }
 }
 
-@keyframes district-burn-pulse {
-  0% {
-    transform: scale(1);
-    opacity: 0.94;
-  }
-  35% {
-    transform: scale(1.02);
-    opacity: 1;
-  }
-  70% {
-    transform: scale(0.985);
-    opacity: 0.98;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
+@keyframes crt-flicker {
+  0% { opacity: 0.1; }
+  100% { opacity: 0.2; }
 }
